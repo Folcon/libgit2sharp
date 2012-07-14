@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using LibGit2Sharp.Core;
+using System.Linq;
 
 namespace LibGit2Sharp
 {
@@ -157,6 +159,85 @@ namespace LibGit2Sharp
             }
 
             return new Signature(name, email, now);
+        }
+
+        public static IEnumerable<Commit> History(this Repository repository, string filePath, Commit startCommit = null)
+        {
+            var filter = new Filter
+            {
+                SortBy = GitSortOptions.Time | GitSortOptions.Reverse
+            };
+
+            IndexEntry index = repository.Index[filePath];
+            string fileSha;
+            //If the index is null, it's probably renamed/deleted
+            if (index != null)
+            {
+                fileSha = index.Id.Sha;
+            }
+            else
+            {
+                //Try find the hard way
+                fileSha = "";
+            }
+
+            string path = filePath;
+            var returnList = new List<Commit>();
+            foreach (Commit commit in repository.Commits.QueryBy(filter))
+            {
+                //Don't show merges as an individual commit
+                if (commit.ParentsCount <= 1)
+                {
+                    path = MatchesFile(commit, commit.Tree, fileSha, path, returnList);
+                }
+            }
+
+            return returnList.OrderBy(commit => commit.Author.When);
+        }
+
+        private static string MatchesFile(Commit commit, Tree tree, string fileSha, string filePath, List<Commit> changes, bool followRenames = true)
+        {
+            foreach (var treeItem in tree)
+            {
+                if (treeItem.Type == GitObjectType.Tree)
+                {
+                    var subTree = treeItem.Target as Tree;
+
+                    return MatchesFile(commit, subTree, fileSha, filePath, changes);
+                }
+                else if (treeItem.Type != GitObjectType.Commit)
+                {
+                    if (((treeItem.Target.Sha == fileSha) && (treeItem.Path == filePath)) && (changes.Count > 0))
+                    {
+                        return filePath;
+                    }
+                    else if ((treeItem.Target.Sha == fileSha) || (treeItem.Path == filePath))
+                    {
+                        if ((treeItem.Path == filePath) || (!followRenames))
+                        {
+                            if (!changes.Contains(commit))
+                            {
+                                changes.Add(commit);
+                            }
+                        }
+                        else  //File is renamed
+                        {
+                            if (!changes.Contains(commit))
+                            {
+                                changes.Add(commit);
+                            }
+
+                            foreach (var parent in commit.Parents)
+                            {
+                                string path = treeItem.Path;
+                                return MatchesFile(parent, parent.Tree, treeItem.Target.Sha, path, changes, false);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return filePath;
         }
     }
 }

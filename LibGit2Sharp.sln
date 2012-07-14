@@ -1,9 +1,11 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibGit2Sharp", "LibGit2Sharp\LibGit2Sharp.csproj", "{EE6ED99F-CB12-4683-B055-D28FC7357A34}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibGit2Sharp.Tests", "LibGit2Sharp.Tests\LibGit2Sharp.Tests.csproj", "{286E63EB-04DD-4ADE-88D6-041B57800761}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Follow test", "Follow test\Follow test.csproj", "{653C231F-735E-4B90-93C1-E5C53410461C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -12,46 +14,51 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{EE6ED99F-CB12-4683-B055-D28FC7357A34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EE6ED99F-CB12-4683-B055-D28FC7357A34}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EE6ED99F-CB12-4683-B055-D28FC7357A34}.Leaks|Any CPU.ActiveCfg = Leaks|Any CPU
-		{EE6ED99F-CB12-4683-B055-D28FC7357A34}.Leaks|Any CPU.Build.0 = Leaks|Any CPU
-		{EE6ED99F-CB12-4683-B055-D28FC7357A34}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EE6ED99F-CB12-4683-B055-D28FC7357A34}.Release|Any CPU.Build.0 = Release|Any CPU
 		{286E63EB-04DD-4ADE-88D6-041B57800761}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{286E63EB-04DD-4ADE-88D6-041B57800761}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{286E63EB-04DD-4ADE-88D6-041B57800761}.Leaks|Any CPU.ActiveCfg = Leaks|Any CPU
 		{286E63EB-04DD-4ADE-88D6-041B57800761}.Leaks|Any CPU.Build.0 = Leaks|Any CPU
 		{286E63EB-04DD-4ADE-88D6-041B57800761}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{286E63EB-04DD-4ADE-88D6-041B57800761}.Release|Any CPU.Build.0 = Release|Any CPU
+		{653C231F-735E-4B90-93C1-E5C53410461C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{653C231F-735E-4B90-93C1-E5C53410461C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{653C231F-735E-4B90-93C1-E5C53410461C}.Leaks|Any CPU.ActiveCfg = Release|Any CPU
+		{653C231F-735E-4B90-93C1-E5C53410461C}.Leaks|Any CPU.Build.0 = Release|Any CPU
+		{653C231F-735E-4B90-93C1-E5C53410461C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{653C231F-735E-4B90-93C1-E5C53410461C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE6ED99F-CB12-4683-B055-D28FC7357A34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE6ED99F-CB12-4683-B055-D28FC7357A34}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE6ED99F-CB12-4683-B055-D28FC7357A34}.Leaks|Any CPU.ActiveCfg = Leaks|Any CPU
+		{EE6ED99F-CB12-4683-B055-D28FC7357A34}.Leaks|Any CPU.Build.0 = Leaks|Any CPU
+		{EE6ED99F-CB12-4683-B055-D28FC7357A34}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE6ED99F-CB12-4683-B055-D28FC7357A34}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = LibGit2Sharp.Core.Generator\LibGit2Sharp.Core.Generator.csproj
-		Policies = $0
-		$0.TextStylePolicy = $1
+		$0.CSharpFormattingPolicy = $2
+		$0.StandardHeader = $3
+		$0.TextStylePolicy = $4
 		$1.inheritsSet = null
 		$1.scope = text/x-csharp
-		$0.CSharpFormattingPolicy = $2
-		$2.IndentSwitchBody = True
-		$2.BeforeMethodCallParentheses = False
-		$2.BeforeMethodDeclarationParentheses = False
 		$2.BeforeConstructorDeclarationParentheses = False
 		$2.BeforeDelegateDeclarationParentheses = False
+		$2.BeforeMethodCallParentheses = False
+		$2.BeforeMethodDeclarationParentheses = False
+		$2.IndentSwitchBody = True
 		$2.NewParentheses = False
-		$2.inheritsSet = Mono
 		$2.inheritsScope = text/x-csharp
+		$2.inheritsSet = Mono
 		$2.scope = text/x-csharp
-		$0.StandardHeader = $3
 		$3.Text = 
 		$3.inheritsSet = Apache2License
-		$0.TextStylePolicy = $4
 		$4.FileWidth = 120
 		$4.RemoveTrailingWhitespace = True
-		$4.inheritsSet = VisualStudio
 		$4.inheritsScope = text/plain
+		$4.inheritsSet = VisualStudio
 		$4.scope = text/plain
+		Policies = $0
+		StartupItem = LibGit2Sharp.Core.Generator\LibGit2Sharp.Core.Generator.csproj
 	EndGlobalSection
 EndGlobal
