@@ -161,7 +161,13 @@ namespace LibGit2Sharp
             return new Signature(name, email, now);
         }
 
-        public static IEnumerable<Commit> History(this Repository repository, string filePath, Commit startCommit = null)
+        /// <summary>
+        /// Returns the history for the specified file
+        /// </summary>
+        /// <param name = "repository">The <see cref = "Repository" /> being worked with.</param>
+        /// <param name="filePath">The filepath to return the history for</param>
+        /// <returns>The calculated list of <see cref=" cref = "LibGit2Sharp.Commit"/>.</returns>
+        public static IEnumerable<Commit> History(this Repository repository, string filePath)
         {
             var filter = new Filter
             {
@@ -177,42 +183,47 @@ namespace LibGit2Sharp
             }
             else
             {
-                //Try find the hard way
-                fileSha = "";
+                //TODO : Try find the hard way? i.e. viewing history of file that no longer exists
+                throw new LibGit2SharpException(String.Format("Can not find file named '{0}' in the current index.", filePath));
             }
 
             string path = filePath;
             var returnList = new List<Commit>();
+
             foreach (Commit commit in repository.Commits.QueryBy(filter))
             {
                 //Don't show merges as an individual commit
                 if (commit.ParentsCount <= 1)
                 {
-                    path = MatchesFile(commit, commit.Tree, fileSha, path, returnList);
+                    //Search the commit for this filename/sha, using new path if file is renamed
+                    path = SearchCommitTree(commit, commit.Tree, fileSha, path, returnList);
                 }
             }
 
             return returnList.OrderBy(commit => commit.Author.When);
         }
 
-        private static string MatchesFile(Commit commit, Tree tree, string fileSha, string filePath, List<Commit> changes, bool followRenames = true)
+        private static string SearchCommitTree(Commit commit, Tree tree, string fileSha, string filePath, List<Commit> changes, bool followRenames = true)
         {
             foreach (var treeItem in tree)
             {
+                //If it is a tree rather than a file, iterate through that tree
                 if (treeItem.Type == GitObjectType.Tree)
                 {
                     var subTree = treeItem.Target as Tree;
-
-                    return MatchesFile(commit, subTree, fileSha, filePath, changes);
+                    return SearchCommitTree(commit, subTree, fileSha, filePath, changes);
                 }
                 else if (treeItem.Type != GitObjectType.Commit)
                 {
+                    //If the sha and the name are the same then this commit didn't change the file
+                    //- Exception to the rule being if this is the first time the file appears in the commit history
                     if (((treeItem.Target.Sha == fileSha) && (treeItem.Path == filePath)) && (changes.Count > 0))
                     {
                         return filePath;
                     }
                     else if ((treeItem.Target.Sha == fileSha) || (treeItem.Path == filePath))
                     {
+                        //Sha different, but names the same
                         if ((treeItem.Path == filePath) || (!followRenames))
                         {
                             if (!changes.Contains(commit))
@@ -220,17 +231,18 @@ namespace LibGit2Sharp
                                 changes.Add(commit);
                             }
                         }
-                        else  //File is renamed
+                        else  //Sha the same, but names different
                         {
                             if (!changes.Contains(commit))
                             {
                                 changes.Add(commit);
                             }
 
+                            //Merge handling - make sure this rename wasn't part of a merge otherwise a commit step is lost
                             foreach (var parent in commit.Parents)
                             {
                                 string path = treeItem.Path;
-                                return MatchesFile(parent, parent.Tree, treeItem.Target.Sha, path, changes, false);
+                                return SearchCommitTree(parent, parent.Tree, treeItem.Target.Sha, path, changes, false);
                             }
                         }
                     }
