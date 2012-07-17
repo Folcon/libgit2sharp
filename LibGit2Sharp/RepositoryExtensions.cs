@@ -193,78 +193,85 @@ namespace LibGit2Sharp
             var returnList = new List<Commit>();
 
             var commit = repository.Commits.QueryBy(filter).First();
-            FollowCommitByFile(commit, commit.Tree, fileSha, filePath, returnList);
+            FollowCommitByFile(repository, commit, fileSha, filePath, returnList);
 
             return returnList.OrderBy(c => c.Author.When);
         }
 
-        private static void FollowCommitByFile(Commit commit, Tree tree, string fileSha, string filePath, List<Commit> changes, bool followRenames = true)
+        private static void FollowCommitByFile(Repository repository, Commit commit, string fileSha, string filePath, List<Commit> changes)
         {
-            foreach (var treeItem in tree)
+            string path = filePath;
+            string sha = fileSha;
+
+            foreach (var parent in commit.Parents)
             {
-                //If it is a tree rather than a file, iterate through that tree
-                if (treeItem.Type == GitObjectType.Tree)
+                //Only track the commit if it wasn't a merge, otherwise we track the commits that make up the merge
+                if (commit.ParentsCount == 1)
                 {
-                    var subTree = treeItem.Target as Tree;
-                    if (subTree != null)
+                    var diff = repository.Diff.Compare(parent.Tree, commit.Tree, new[] { filePath });
+                    //If the file change, track it
+                    if (diff.Count() > 0)
                     {
-                        FollowCommitByFile(commit, subTree, fileSha, filePath, changes);
+                        if (!changes.Contains(commit))
+                        {
+                            changes.Add(commit);
+                            sha = diff.First().Oid.Sha;
+                            path = diff.First().OldPath;
+
+                            //If it was an add or delete, do a check for renames
+                            if ((diff.Deleted.Count() > 0) || (diff.Added.Count() > 0))
+                            {
+                                var foundPath = ManualTreeCompare(parent, parent.Tree, sha, path);
+                                if (!String.IsNullOrEmpty(foundPath))
+                                {
+                                    path = foundPath;
+                                }
+                            }
+                        }
                     }
                 }
-                else if (treeItem.Type != GitObjectType.Commit)
+
+                FollowCommitByFile(repository, parent, sha, path, changes);
+            }
+
+            //Check if this file existed in the initial commit
+            if (commit.ParentsCount == 0)
+            {
+                if (!String.IsNullOrEmpty(ManualTreeCompare(commit, commit.Tree, sha, path)))
                 {
-                    //If the sha and the name are the same then this commit didn't change the file
-                    //However as we're following from the end, one commit will always be the latest
-                    if (((treeItem.Target.Sha == fileSha) && (treeItem.Path == filePath)) && (changes.Count == 1))
+                    if (!changes.Contains(commit))
                     {
-                        changes[0] = commit;
-                        foreach (var parent in commit.Parents)
-                        {
-                            FollowCommitByFile(parent, parent.Tree, fileSha, filePath, changes);
-                        }
-                    }
-                    else if (((treeItem.Target.Sha == fileSha) && (treeItem.Path == filePath)) && (changes.Count > 0)) //File didnt change
-                    {
-                        return;
-                    }
-                    else if ((treeItem.Target.Sha == fileSha) || (treeItem.Path == filePath))
-                    {
-                        //Sha different, but names the same
-                        if ((treeItem.Path == filePath))
-                        {
-                            //Merge handling, dont add this commit but rather than commits that form it
-                            if (commit.ParentsCount <= 1)
-                            {
-                                if (!changes.Contains(commit))
-                                {
-                                    changes.Add(commit);
-                                }
-                            }
-
-                            foreach (var parent in commit.Parents)
-                            {
-                                FollowCommitByFile(parent, parent.Tree, treeItem.Target.Sha, treeItem.Path, changes);
-                            }
-                        }
-                        else  //Sha the same, but names different
-                        {
-                            //Merge handling, dont add this commit but rather than commits that form it
-                            if (commit.ParentsCount <= 1)
-                            {
-                                if (!changes.Contains(commit))
-                                {
-                                    changes.Add(commit);
-                                }
-                            }
-
-                            foreach (var parent in commit.Parents)
-                            {
-                                FollowCommitByFile(parent, parent.Tree, treeItem.Target.Sha, treeItem.Path, changes);
-                            }
-                        }
+                        changes.Add(commit);
                     }
                 }
             }
+
+        }
+
+        private static string ManualTreeCompare(Commit commit, Tree tree, string fileSha, string filePath)
+        {
+            foreach (var treeEntry in tree)
+            {
+                if (treeEntry.Type == GitObjectType.Tree)
+                {
+                    var found = ManualTreeCompare(commit, treeEntry.Target as Tree, fileSha, filePath);
+
+                    if ((!String.IsNullOrEmpty(found)) && (found != filePath))
+                    {
+                        return found;
+                    }
+                }
+                else if (treeEntry.Type != GitObjectType.Commit)
+                {
+                    if ((treeEntry.Target.Sha == fileSha) || (treeEntry.Path == filePath))
+                    {
+                        return treeEntry.Path;
+                    }
+                }
+            }
+
+            //File not found in this tree
+            return null;
         }
     }
 }
