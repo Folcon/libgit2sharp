@@ -171,10 +171,12 @@ namespace LibGit2Sharp
         {
             var filter = new Filter
             {
-                SortBy = GitSortOptions.Time | GitSortOptions.Reverse
+                SortBy = GitSortOptions.Time
             };
 
+            //Look the file up in the current index
             IndexEntry index = repository.Index[filePath];
+
             string fileSha;
             //If the index is null, it's probably renamed/deleted
             if (index != null)
@@ -190,20 +192,13 @@ namespace LibGit2Sharp
             string path = filePath;
             var returnList = new List<Commit>();
 
-            foreach (Commit commit in repository.Commits.QueryBy(filter))
-            {
-                //Don't show merges as an individual commit
-                if (commit.ParentsCount <= 1)
-                {
-                    //Search the commit for this filename/sha, using new path if file is renamed
-                    path = SearchCommitTree(commit, commit.Tree, fileSha, path, returnList);
-                }
-            }
+            var commit = repository.Commits.QueryBy(filter).First();
+            FollowCommitByFile(commit, commit.Tree, fileSha, filePath, returnList);
 
-            return returnList.OrderBy(commit => commit.Author.When);
+            return returnList.OrderBy(c => c.Author.When);
         }
 
-        private static string SearchCommitTree(Commit commit, Tree tree, string fileSha, string filePath, List<Commit> changes, bool followRenames = true)
+        private static void FollowCommitByFile(Commit commit, Tree tree, string fileSha, string filePath, List<Commit> changes, bool followRenames = true)
         {
             foreach (var treeItem in tree)
             {
@@ -211,45 +206,65 @@ namespace LibGit2Sharp
                 if (treeItem.Type == GitObjectType.Tree)
                 {
                     var subTree = treeItem.Target as Tree;
-                    return SearchCommitTree(commit, subTree, fileSha, filePath, changes);
+                    if (subTree != null)
+                    {
+                        FollowCommitByFile(commit, subTree, fileSha, filePath, changes);
+                    }
                 }
                 else if (treeItem.Type != GitObjectType.Commit)
                 {
                     //If the sha and the name are the same then this commit didn't change the file
-                    //- Exception to the rule being if this is the first time the file appears in the commit history
-                    if (((treeItem.Target.Sha == fileSha) && (treeItem.Path == filePath)) && (changes.Count > 0))
+                    //However as we're following from the end, one commit will always be the latest
+                    if (((treeItem.Target.Sha == fileSha) && (treeItem.Path == filePath)) && (changes.Count == 1))
                     {
-                        return filePath;
+                        changes[0] = commit;
+                        foreach (var parent in commit.Parents)
+                        {
+                            FollowCommitByFile(parent, parent.Tree, fileSha, filePath, changes);
+                        }
+                    }
+                    else if (((treeItem.Target.Sha == fileSha) && (treeItem.Path == filePath)) && (changes.Count > 0)) //File didnt change
+                    {
+                        return;
                     }
                     else if ((treeItem.Target.Sha == fileSha) || (treeItem.Path == filePath))
                     {
                         //Sha different, but names the same
-                        if ((treeItem.Path == filePath) || (!followRenames))
+                        if ((treeItem.Path == filePath))
                         {
-                            if (!changes.Contains(commit))
+                            //Merge handling, dont add this commit but rather than commits that form it
+                            if (commit.ParentsCount <= 1)
                             {
-                                changes.Add(commit);
+                                if (!changes.Contains(commit))
+                                {
+                                    changes.Add(commit);
+                                }
+                            }
+
+                            foreach (var parent in commit.Parents)
+                            {
+                                FollowCommitByFile(parent, parent.Tree, treeItem.Target.Sha, treeItem.Path, changes);
                             }
                         }
                         else  //Sha the same, but names different
                         {
-                            if (!changes.Contains(commit))
+                            //Merge handling, dont add this commit but rather than commits that form it
+                            if (commit.ParentsCount <= 1)
                             {
-                                changes.Add(commit);
+                                if (!changes.Contains(commit))
+                                {
+                                    changes.Add(commit);
+                                }
                             }
 
-                            //Merge handling - make sure this rename wasn't part of a merge otherwise a commit step is lost
                             foreach (var parent in commit.Parents)
                             {
-                                string path = treeItem.Path;
-                                return SearchCommitTree(parent, parent.Tree, treeItem.Target.Sha, path, changes, false);
+                                FollowCommitByFile(parent, parent.Tree, treeItem.Target.Sha, treeItem.Path, changes);
                             }
                         }
                     }
                 }
             }
-
-            return filePath;
         }
     }
 }

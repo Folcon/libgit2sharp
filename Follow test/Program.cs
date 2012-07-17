@@ -45,6 +45,17 @@ namespace Follow_test
                     Console.WriteLine("{0} {1}", commit.Id.ToString(7), commit.MessageShort);
                 }
 
+                //renamed.txt
+                /*
+                test = repo.History("renamed.txt").Reverse().ToArray();
+
+                Console.WriteLine("renamed.txt");
+                Console.WriteLine("-------------------");
+                foreach (var commit in test)
+                {
+                    Console.WriteLine("{0} {1}", commit.Id.ToString(7), commit.MessageShort);
+                }*/
+
             }
 
             Console.ReadKey();
