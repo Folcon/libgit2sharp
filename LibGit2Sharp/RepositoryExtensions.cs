@@ -226,6 +226,22 @@ namespace LibGit2Sharp
                                 {
                                     path = foundPath;
                                 }
+                                else  //Sha or name wasnt found, do a % diff check
+                                {
+                                    //Get the current file so we can compare it to files changed in diff
+                                    var blob = commit.Tree[path].Target as Blob;
+
+                                    if (blob != null)
+                                    {
+                                        //Get the total lines so we can work out percentage
+                                        var lineCount = repository.Diff.Compare(repository.Commits.Last().Tree, commit.Tree, new[] { path });
+                                        var manualDiffPath = FindByDiffPercentage(repository, parent.Tree, blob, lineCount.LinesAdded);
+                                        if (!String.IsNullOrEmpty(manualDiffPath))
+                                        {
+                                            path = manualDiffPath;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -246,6 +262,37 @@ namespace LibGit2Sharp
                 }
             }
 
+        }
+
+        private static string FindByDiffPercentage(Repository repository, Tree tree, Blob latestBlob, int lineCount, int threshold = 50)
+        {
+            foreach (var treeEntry in tree)
+            {
+                if (treeEntry.Type == GitObjectType.Tree)
+                {
+                    var found = FindByDiffPercentage(repository, tree, latestBlob, lineCount);
+
+                    if (!String.IsNullOrEmpty(found))
+                    {
+                        return found;
+                    }
+                }
+                else if (treeEntry.Type == GitObjectType.Blob)
+                {
+                    var diff = repository.Diff.Compare(treeEntry.Target as Blob, latestBlob);
+                    if (!diff.IsBinaryComparison)
+                    {
+                        var percentage = 100 - (((diff.LinesAdded + diff.LinesDeleted) / (double)lineCount) * 100);
+                        if (percentage >= threshold)
+                        {
+                            return treeEntry.Path;
+                        }
+                    }
+                }
+            }
+
+            //File not found in this tree
+            return null;
         }
 
         private static string ManualTreeCompare(Commit commit, Tree tree, string fileSha, string filePath)
