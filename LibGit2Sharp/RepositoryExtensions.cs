@@ -270,7 +270,7 @@ namespace LibGit2Sharp
             {
                 if (treeEntry.Type == GitObjectType.Tree)
                 {
-                    var found = FindByDiffPercentage(repository, tree, latestBlob, lineCount);
+                    var found = FindByDiffPercentage(repository, treeEntry.Target as Tree, latestBlob, lineCount);
 
                     if (!String.IsNullOrEmpty(found))
                     {
@@ -282,7 +282,7 @@ namespace LibGit2Sharp
                     var diff = repository.Diff.Compare(treeEntry.Target as Blob, latestBlob);
                     if (!diff.IsBinaryComparison)
                     {
-                        var percentage = 100 - (((diff.LinesAdded + diff.LinesDeleted) / (double)lineCount) * 100);
+                        var percentage = ((double)lineCount / (diff.LinesAdded + diff.LinesDeleted + lineCount)) * 100;
                         if (percentage >= threshold)
                         {
                             return treeEntry.Path;
